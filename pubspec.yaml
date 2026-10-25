@@ -23,6 +23,9 @@ dependencies:
   # इंटरनेटवरील डेटा
   http: ^1.4.0
 
+  # अधिकृत भूजल वेबसाइट उघडण्यासाठी
+  url_launcher: ^6.3.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
