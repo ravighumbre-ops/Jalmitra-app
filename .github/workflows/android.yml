@@ -1,8 +1,10 @@
-
 name: Build Jalmitra APK
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -10,31 +12,28 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
 
-      - name: Create Flutter app
-        run: flutter create --org com.jalmitra app
+      - name: Create missing Android project files
+        run: flutter create --platforms=android .
 
-      - name: Build APK
-        run: |
-          cd app
-          flutter build apk --release
+      - name: Get Flutter packages
+        run: flutter pub get
 
-      - name: Upload APK
+      - name: Build release APK
+        run: flutter build apk --release
+
+      - name: Upload Jalmitra APK
         uses: actions/upload-artifact@v4
         with:
-          name: jalmitra-apk
-          path: app/build/app/outputs/flutter-apk/app-release.apk
+          name: Jalmitra-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
+          
