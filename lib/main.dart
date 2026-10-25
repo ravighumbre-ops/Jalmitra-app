@@ -1,5 +1,7 @@
 
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 void main() {
   runApp(const JalmitraApp());
@@ -11,12 +13,10 @@ class JalmitraApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
       title: 'Jalmitra',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
-        ),
+        colorSchemeSeed: Colors.blue,
         useMaterial3: true,
       ),
       home: const JalmitraHome(),
@@ -27,52 +27,69 @@ class JalmitraApp extends StatelessWidget {
 class JalmitraHome extends StatelessWidget {
   const JalmitraHome({super.key});
 
+  static const LatLng waghala = LatLng(19.130057, 76.469843);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Jalmitra - भूजल माहिती'),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      body: Column(
         children: [
-          const Icon(
-            Icons.water_drop,
-            size: 70,
-            color: Colors.blue,
+          const ListTile(
+            leading: Icon(Icons.water_drop, color: Colors.blue),
+            title: Text('वाघाळा, तालुका पाथरी'),
+            subtitle: Text('जिल्हा परभणी, महाराष्ट्र'),
           ),
-          const Text(
-            'वाघाळा, ता. पाथरी, जि. परभणी',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.map),
-              title: const Text('भूजल संभाव्यता नकाशा'),
-              subtitle: const Text(
-                'अधिकृत नकाशा जोडण्याचे काम बाकी आहे.',
+          Expanded(
+            child: FlutterMap(
+              options: const MapOptions(
+                initialCenter: waghala,
+                initialZoom: 13,
               ),
+              children: [
+                TileLayer(
+                  urlTemplate:
+                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.example.jalmitra',
+                ),
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: waghala,
+                      width: 120,
+                      height: 80,
+                      child: const Column(
+                        children: [
+                          Icon(
+                            Icons.location_pin,
+                            color: Colors.red,
+                            size: 40,
+                          ),
+                          Text(
+                            'वाघाळा',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              backgroundColor: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.water),
-              title: const Text('विहीर नियोजन'),
-              subtitle: const Text(
-                'भूजल माहिती व स्थानिक सर्वेक्षण आवश्यक.',
-              ),
+          const Padding(
+            padding: EdgeInsets.all(12),
+            child: Text(
+              'सूचना: हा सामान्य भौगोलिक नकाशा आहे. '
+              'यातून जमिनीखालील पाण्याची जागा किंवा '
+              'विहिरीतील पाण्याची खात्री कळत नाही.',
+              textAlign: TextAlign.center,
             ),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'सूचना: हा प्राथमिक नमुना आहे. '
-            'यामध्ये प्रत्यक्ष भूजल मोजमाप किंवा '
-            'पाणी मिळण्याची खात्री दिलेली नाही.',
           ),
         ],
       ),
