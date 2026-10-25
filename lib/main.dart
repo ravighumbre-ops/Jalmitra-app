@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -40,6 +41,7 @@ class _JalmitraHomeState extends State<JalmitraHome> {
   LatLng? currentPosition;
   double? accuracy;
   bool loading = false;
+
   String message = 'आपले GPS स्थान पाहण्यासाठी बटण दाबा';
 
   Future<void> findMyLocation() async {
@@ -47,7 +49,7 @@ class _JalmitraHomeState extends State<JalmitraHome> {
 
     setState(() {
       loading = true;
-      message = 'GPS स्थान शोधत आहे...';
+      message = 'GPS स्थान शोधत आहे... मोकळ्या जागेत थांबा.';
     });
 
     try {
@@ -56,9 +58,11 @@ class _JalmitraHomeState extends State<JalmitraHome> {
 
       if (!serviceEnabled) {
         if (!mounted) return;
+
         setState(() {
           message = 'मोबाईलचे Location चालू करा.';
         });
+
         await Geolocator.openLocationSettings();
         return;
       }
@@ -73,16 +77,23 @@ class _JalmitraHomeState extends State<JalmitraHome> {
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
         if (!mounted) return;
+
         setState(() {
-          message = 'GPS वापरण्यासाठी Location परवानगी द्या.';
+          message = permission == LocationPermission.deniedForever
+              ? 'Location परवानगी बंद आहे. App Settings मध्ये ती चालू करा.'
+              : 'GPS वापरण्यासाठी Location परवानगी द्या.';
         });
+
+        if (permission == LocationPermission.deniedForever) {
+          await Geolocator.openAppSettings();
+        }
         return;
       }
 
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 25),
+          timeLimit: Duration(seconds: 60),
         ),
       );
 
@@ -93,18 +104,34 @@ class _JalmitraHomeState extends State<JalmitraHome> {
         position.longitude,
       );
 
+      String gpsMessage;
+
+      if (position.accuracy <= 20) {
+        gpsMessage = 'GPS स्थान मिळाले. अचूकता चांगली आहे.';
+      } else if (position.accuracy <= 50) {
+        gpsMessage =
+            'GPS स्थान मिळाले; अचूकता मध्यम आहे. '
+            'मोकळ्या जागेत पुन्हा प्रयत्न करा.';
+      } else {
+        gpsMessage =
+            'GPS स्थान मिळाले; पण अचूकता कमी आहे. '
+            'आकाश उघडे असलेल्या जागेत थांबा.';
+      }
+
       setState(() {
         currentPosition = point;
         accuracy = position.accuracy;
-        message = 'GPS स्थान मिळाले.';
+        message = gpsMessage;
       });
 
       mapController.move(point, 16);
     } catch (e) {
       if (!mounted) return;
+
       setState(() {
         message =
-            'स्थान मिळाले नाही. GPS, परवानगी आणि सिग्नल तपासा.';
+            'स्थान मिळाले नाही. Location, परवानगी आणि '
+            'GPS सिग्नल तपासा. पुन्हा प्रयत्न करा.';
       });
     } finally {
       if (mounted) {
@@ -147,10 +174,18 @@ class _JalmitraHomeState extends State<JalmitraHome> {
               width: double.infinity,
               child: FilledButton.icon(
                 onPressed: loading ? null : findMyLocation,
-                icon: const Icon(Icons.my_location),
+                icon: loading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon(Icons.my_location),
                 label: Text(
                   loading
-                      ? 'स्थान शोधत आहे...'
+                      ? 'GPS स्थान शोधत आहे...'
                       : 'माझे GPS स्थान शोधा',
                 ),
               ),
@@ -165,6 +200,11 @@ class _JalmitraHomeState extends State<JalmitraHome> {
             child: Text(
               message,
               textAlign: TextAlign.center,
+              style: TextStyle(
+                color: accuracy != null && accuracy! > 50
+                    ? Colors.deepOrange
+                    : Colors.black87,
+              ),
             ),
           ),
 
@@ -173,7 +213,10 @@ class _JalmitraHomeState extends State<JalmitraHome> {
               padding: const EdgeInsets.only(bottom: 6),
               child: Text(
                 'GPS अचूकता: सुमारे ${accuracy!.round()} मीटर',
-                style: const TextStyle(fontSize: 12),
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
 
@@ -267,16 +310,20 @@ class _JalmitraHomeState extends State<JalmitraHome> {
                     Text('आपले GPS स्थान'),
                   ],
                 ),
+
                 const SizedBox(height: 8),
+
                 OutlinedButton.icon(
                   onPressed: goToWaghala,
                   icon: const Icon(Icons.location_searching),
                   label: const Text('वाघाळा नकाशावर दाखवा'),
                 ),
+
                 const Text(
-                  'भूजल संभाव्यता डेटा अजून जोडलेला नाही. '
-                  'GPS किंवा सामान्य नकाशा जमिनीखालील पाण्याची '
-                  'खात्री देत नाही.',
+                  'टीप: GPS अचूकता ही अंदाजित असते. '
+                  'हा सामान्य नकाशा आहे; भूजल संभाव्यता डेटा '
+                  'अजून जोडलेला नाही. विहिरीसाठी योग्य जागा '
+                  'निश्चित करण्यासाठी स्वतंत्र भूजल सर्वेक्षण आवश्यक आहे.',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 11),
                 ),
@@ -288,4 +335,3 @@ class _JalmitraHomeState extends State<JalmitraHome> {
     );
   }
 }
-
