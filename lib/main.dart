@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:http/http.dart' as http;
 
 void main() {
   runApp(const JalmitraApp());
@@ -33,29 +34,114 @@ class JalmitraHomePage extends StatefulWidget {
       _JalmitraHomePageState();
 }
 
-class _JalmitraHomePageState extends State<JalmitraHomePage> {
-  final MapController mapController = MapController();
-
-  // वाघाळा, तालुका पाथरी, जिल्हा परभणी
-  final LatLng villageLocation =
-      LatLng(19.130057, 76.469843);
-
+class _JalmitraHomePageState
+    extends State<JalmitraHomePage> {
   int selectedIndex = 0;
+  bool loading = false;
+  String status = 'अधिकृत डेटासेट अजून तपासलेला नाही.';
+  List<String> records = [];
+
+  final LatLng villageLocation =
+      const LatLng(19.130057, 76.469843);
+
+  // राष्ट्रीय जल डेटा पोर्टलवरील महाराष्ट्राचा CSV डेटासेट.
+  // हा ऐतिहासिक डेटासेट आहे; आजची पातळी समजू नये.
+  static const String csvUrl =
+      'https://nwdp.nwic.gov.in/dataset/'
+      '85bb464f-bcd5-440b-be2c-fadb2725df4c/resource/'
+      '817c6429-5853-4198-99e1-20ddf3d9f3bc/download/'
+      'gwl_tel_6_hourly_maharashtra-gw_mh_1991_2020.csv';
+
+  Future<void> loadGroundwaterData() async {
+    setState(() {
+      loading = true;
+      status = 'अधिकृत CSV डेटा डाउनलोड होत आहे...';
+      records = [];
+    });
+
+    try {
+      final response = await http
+          .get(Uri.parse(csvUrl))
+          .timeout(const Duration(seconds: 45));
+
+      if (response.statusCode != 200) {
+        throw Exception(
+          'सरकारी सर्व्हर प्रतिसाद: ${response.statusCode}',
+        );
+      }
+
+      // CSV मध्ये शोधण्यासाठी गाव/तालुका/जिल्ह्याचे नाव.
+      final lines = response.body
+          .replaceFirst('\uFEFF', '')
+          .split(RegExp(r'\r?\n'))
+          .where((line) => line.trim().isNotEmpty)
+          .toList();
+
+      if (lines.isEmpty) {
+        throw Exception('CSV फाइल रिकामी आहे.');
+      }
+
+      final keywords = [
+        'waghala',
+        'pathri',
+        'parbhani',
+        'वाघाळा',
+        'पाथरी',
+        'परभणी',
+      ];
+
+      final matches = <String>[];
+
+      // पहिली ओळ बहुधा CSV शीर्षके असतात.
+      // त्या ओळीला नोंद म्हणून दाखवू नये.
+      for (final line in lines.skip(1)) {
+        final lower = line.toLowerCase();
+
+        if (keywords.any((word) => lower.contains(word))) {
+          matches.add(line);
+          if (matches.length >= 30) break;
+        }
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        records = matches;
+        status = matches.isEmpty
+            ? 'CSV डाउनलोड झाला; पण वाघाळा, पाथरी किंवा '
+                'परभणी नावाची नोंद या शोधात सापडली नाही. '
+                'याचा अर्थ त्या भागात भूजल नाही असा होत नाही.'
+            : 'संबंधित मजकूर असलेल्या ${matches.length} '
+                'नोंदी सापडल्या. खाली मूळ CSV नोंदी पहा.';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        status = 'डेटा मिळवता आला नाही: $e\n\n'
+            'इंटरनेट, सरकारी सर्व्हर किंवा डेटासेटचा '
+            'दुवा तपासा.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => loading = false);
+      }
+    }
+  }
 
   Widget buildHomePage() {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         const Text(
-          'नमस्कार! जलमित्रमध्ये आपले स्वागत आहे',
+          'जलमित्रमध्ये आपले स्वागत आहे',
           style: TextStyle(
-            fontSize: 21,
+            fontSize: 22,
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         const Text(
-          'भूजल, विहीर आणि बोअरवेल यांची माहिती एका ठिकाणी.',
+          'वाघाळा, तालुका पाथरी, जिल्हा परभणी',
         ),
         const SizedBox(height: 16),
         Card(
@@ -65,12 +151,13 @@ class _JalmitraHomePageState extends State<JalmitraHomePage> {
               color: Colors.blue,
               size: 36,
             ),
-            title: const Text('भूजल माहिती'),
+            title: const Text('अधिकृत भूजल माहिती'),
             subtitle: const Text(
-              'भूजल पातळी व उपलब्ध अधिकृत माहिती तपासा.',
+              'सरकारी CSV डेटासेटमधील नोंदी शोधा.',
             ),
             onTap: () {
               setState(() => selectedIndex = 1);
+              loadGroundwaterData();
             },
           ),
         ),
@@ -81,9 +168,9 @@ class _JalmitraHomePageState extends State<JalmitraHomePage> {
               color: Colors.teal,
               size: 36,
             ),
-            title: const Text('विहीर आणि बोअरवेल मार्गदर्शन'),
+            title: const Text('विहीर आणि बोअरवेल'),
             subtitle: const Text(
-              'विहीर, बोअरवेल आणि पाणी व्यवस्थापनाची माहिती.',
+              'पाणी शोधण्यापूर्वी सर्वेक्षणाचे मार्गदर्शन.',
             ),
             onTap: () {
               setState(() => selectedIndex = 2);
@@ -98,20 +185,16 @@ class _JalmitraHomePageState extends State<JalmitraHomePage> {
               size: 36,
             ),
             title: const Text('भूजल नकाशा'),
-            subtitle: const Text(
-              'वाघाळा परिसराचा नकाशा उघडा.',
-            ),
+            subtitle: const Text('वाघाळा परिसर पाहा.'),
             onTap: () {
               setState(() => selectedIndex = 3);
             },
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         const Text(
-          'महत्त्वाची सूचना: नकाशा हा परिसर दाखवतो. '
-          'तो प्रत्यक्ष भूजल पातळी किंवा बोअरवेलमध्ये '
-          'पाणी लागण्याची खात्री देत नाही.',
-          style: TextStyle(fontSize: 13),
+          'सूचना: नकाशा किंवा ऐतिहासिक नोंदी '
+          'बोअरवेलमध्ये पाणी लागण्याची खात्री देत नाहीत.',
         ),
       ],
     );
@@ -122,41 +205,55 @@ class _JalmitraHomePageState extends State<JalmitraHomePage> {
       padding: const EdgeInsets.all(16),
       children: [
         const Text(
-          'भूजल माहिती',
+          'अधिकृत भूजल डेटा',
           style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 16),
-        const Card(
-          child: ListTile(
-            leading: Icon(
-              Icons.water_drop,
-              color: Colors.blue,
-            ),
-            title: Text('भूजल पातळी'),
-            subtitle: Text(
-              'या ठिकाणाची मोजलेली अधिकृत पातळी '
-              'अद्याप जोडलेली नाही.',
-            ),
-          ),
-        ),
-        const Card(
-          child: ListTile(
-            leading: Icon(Icons.public, color: Colors.green),
-            title: Text('अधिकृत भूजल माहिती'),
-            subtitle: Text(
-              'CGWB आणि महाराष्ट्र भूजल सर्वेक्षण '
-              'विकास यंत्रणेच्या उपलब्ध नोंदी तपासा.',
-            ),
-          ),
+        const SizedBox(height: 8),
+        const Text(
+          'स्रोत: National Water Data Portal / '
+          'महाराष्ट्र भूजल विभाग',
         ),
         const SizedBox(height: 8),
         const Text(
-          'टीप: प्रत्यक्ष सरकारी डेटा/API जोडल्याशिवाय '
-          'या अ‍ॅपमध्ये सध्याची भूजल पातळी किंवा '
-          'भूजल संभाव्यता उपलब्ध होणार नाही.',
+          'डेटासेट कालावधी: 1991–2020. '
+          'हा वर्तमान भूजल अहवाल नाही.',
+        ),
+        const SizedBox(height: 16),
+        FilledButton.icon(
+          onPressed: loading ? null : loadGroundwaterData,
+          icon: const Icon(Icons.download),
+          label: Text(
+            loading ? 'डेटा डाउनलोड होत आहे...' : 'सरकारी डेटा तपासा',
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (loading)
+          const Center(child: CircularProgressIndicator()),
+        SelectableText(status),
+        const SizedBox(height: 16),
+        if (records.isNotEmpty)
+          const Text(
+            'मूळ CSV नोंदी',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        for (int i = 0; i < records.length; i++)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: SelectableText(records[i]),
+            ),
+          ),
+        const SizedBox(height: 12),
+        const Text(
+          'नोंदींमध्ये गावाचे नाव नसल्यास जवळच्या '
+          'निरीक्षण केंद्राचा डेटा आपोआप तुमच्या '
+          'गावाचा डेटा मानला जाणार नाही.',
         ),
       ],
     );
@@ -165,42 +262,42 @@ class _JalmitraHomePageState extends State<JalmitraHomePage> {
   Widget buildWellPage() {
     return ListView(
       padding: const EdgeInsets.all(16),
-      children: [
-        const Text(
+      children: const [
+        Text(
           'विहीर आणि बोअरवेल मार्गदर्शन',
           style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 16),
-        const Card(
+        SizedBox(height: 16),
+        Card(
           child: ListTile(
             leading: Icon(Icons.water, color: Colors.blue),
             title: Text('विहीर'),
             subtitle: Text(
-              'विहिरीची खोली, पाण्याची पातळी आणि '
-              'हंगामानुसार होणारे बदल नोंदवा.',
+              'வिहिरीची खोली, पाण्याची पातळी आणि '
+              'हंगामानुसार बदल नोंदवा.',
             ),
           ),
         ),
-        const Card(
+        Card(
           child: ListTile(
             leading: Icon(Icons.vertical_align_bottom),
             title: Text('बोअरवेल'),
             subtitle: Text(
-              'बोअरवेल करण्यापूर्वी भूवैज्ञानिक '
-              'सर्वेक्षण आणि तज्ज्ञांचा सल्ला घ्या.',
+              'बोअरवेलपूर्वी भूवैज्ञानिक सर्वेक्षण '
+              'आणि तज्ज्ञांचा सल्ला घ्या.',
             ),
           ),
         ),
-        const Card(
+        Card(
           child: ListTile(
             leading: Icon(Icons.eco, color: Colors.green),
             title: Text('पाणी पुनर्भरण'),
             subtitle: Text(
-              'पावसाचे पाणी साठवणे आणि '
-              'பூजल पुनर्भरणासाठी योग्य उपाय करा.',
+              'पावसाचे पाणी साठवणे आणि भूजल पुनर्भरण '
+              'यासाठी योग्य उपाय करा.',
             ),
           ),
         ),
@@ -223,7 +320,6 @@ class _JalmitraHomePageState extends State<JalmitraHomePage> {
         ),
         Expanded(
           child: FlutterMap(
-            mapController: mapController,
             options: MapOptions(
               initialCenter: villageLocation,
               initialZoom: 13,
@@ -238,19 +334,18 @@ class _JalmitraHomePageState extends State<JalmitraHomePage> {
                 markers: [
                   Marker(
                     point: villageLocation,
-                    width: 150,
-                    height: 70,
+                    width: 120,
+                    height: 65,
                     child: const Column(
                       children: [
                         Icon(
                           Icons.location_on,
                           color: Colors.red,
-                          size: 38,
+                          size: 36,
                         ),
                         Text(
                           'वाघाळा',
                           style: TextStyle(
-                            fontWeight: FontWeight.bold,
                             backgroundColor: Colors.white,
                           ),
                         ),
@@ -288,6 +383,9 @@ class _JalmitraHomePageState extends State<JalmitraHomePage> {
         selectedIndex: selectedIndex,
         onDestinationSelected: (index) {
           setState(() => selectedIndex = index);
+          if (index == 1 && records.isEmpty && !loading) {
+            loadGroundwaterData();
+          }
         },
         destinations: const [
           NavigationDestination(
