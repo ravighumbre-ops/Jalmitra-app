@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -16,9 +17,7 @@ class JalmitraApp extends StatelessWidget {
       title: 'जलमित्र',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
-        ),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
       home: const JalmitraHome(),
@@ -26,329 +25,202 @@ class JalmitraApp extends StatelessWidget {
   }
 }
 
-class JalmitraHome extends StatefulWidget {
+class JalmitraHome extends StatelessWidget {
   const JalmitraHome({super.key});
 
-  @override
-  State<JalmitraHome> createState() => _JalmitraHomeState();
-}
+  static const LatLng waghala = LatLng(19.130057, 76.469843);
 
-class _JalmitraHomeState extends State<JalmitraHome> {
-  int page = 0;
+  Future<void> openWebsite(String url) async {
+    final uri = Uri.parse(url);
+    final success = await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    );
 
-  static const LatLng village =
-      LatLng(19.130057, 76.469843);
-
-  // अधिकृत स्रोत
-  static final Uri gsdaUrl = Uri.parse(
-    'https://gsda.maharashtra.gov.in/en-dashboard/',
-  );
-
-  static final Uri nwdpUrl = Uri.parse(
-    'https://nwdp.nwic.gov.in/en/dataset/'
-    'ground-water-level-manual-monthly-'
-    'maharashtra-ground-water-department',
-  );
-
-  static final Uri aquiferReportUrl = Uri.parse(
-    'https://cgwb.gov.in/cgwbpnm/publication-detail/1601',
-  );
-
-  Future<void> openOfficialSource(Uri url) async {
-    try {
-      final opened = await launchUrl(
-        url,
-        mode: LaunchMode.externalApplication,
-      );
-
-      if (!opened && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('दुवा उघडता आला नाही. पुन्हा प्रयत्न करा.'),
-          ),
-        );
-      }
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('इंटरनेट कनेक्शन तपासा.'),
-        ),
-      );
+    if (!success) {
+      debugPrint('वेबसाइट उघडता आली नाही: $url');
     }
   }
 
-  Widget homePage() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const Text(
-          'जलमित्र',
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const Text(
-          'वाघाळा, तालुका पाथरी, जिल्हा परभणी',
-        ),
-        const SizedBox(height: 16),
-        featureCard(
-          Icons.water_drop,
-          'सरकारी निरीक्षण केंद्रे',
-          'उपलब्ध सरकारी भूजल नोंदी तपासा.',
-          () => setState(() => page = 1),
-        ),
-        featureCard(
-          Icons.layers,
-          'भूजल संभाव्यता',
-          'भूजल अहवाल आणि संभाव्य क्षेत्रांची माहिती.',
-          () => setState(() => page = 2),
-        ),
-        featureCard(
-          Icons.map,
-          'परिसराचा नकाशा',
-          'वाघाळ्याचे स्थान आणि नकाशा पाहा.',
-          () => setState(() => page = 3),
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'सूचना: नकाशा किंवा जवळच्या विहिरीची पातळी '
-          'वाघाळ्यातील भूजल पातळी समजू नये.',
-        ),
-      ],
-    );
-  }
-
-  Widget featureCard(
-    IconData icon,
-    String title,
-    String subtitle,
-    VoidCallback action,
-  ) {
+  Widget sourceButton({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required String url,
+  }) {
     return Card(
       child: ListTile(
-        leading: Icon(icon, size: 34, color: Colors.blue),
-        title: Text(title),
+        leading: Icon(icon, size: 32, color: Colors.blue),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         subtitle: Text(subtitle),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: action,
+        trailing: const Icon(Icons.open_in_new),
+        onTap: () => openWebsite(url),
       ),
-    );
-  }
-
-  Widget monitoringPage() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const Text(
-          'सरकारी भूजल निरीक्षण केंद्रे',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 12),
-        const Card(
-          child: Padding(
-            padding: EdgeInsets.all(14),
-            child: Text(
-              'वाघाळ्यातील स्वतंत्र निरीक्षण केंद्राची '
-              'नोंद सध्या या अ‍ॅपमध्ये जोडलेली नाही. '
-              'म्हणून कोणतीही बनावट भूजल पातळी दाखवली '
-              'जात नाही.',
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        FilledButton.icon(
-          onPressed: () => openOfficialSource(nwdpUrl),
-          icon: const Icon(Icons.open_in_browser),
-          label: const Text('सरकारी मासिक भूजल नोंदी'),
-        ),
-        const SizedBox(height: 8),
-        OutlinedButton.icon(
-          onPressed: () => openOfficialSource(gsdaUrl),
-          icon: const Icon(Icons.public),
-          label: const Text('महाराष्ट्र GSDA डॅशबोर्ड'),
-        ),
-        const SizedBox(height: 16),
-        const Text(
-          'डेटा मिळाल्यावर नोंदवायची माहिती:',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        const ListTile(
-          leading: Icon(Icons.location_on),
-          title: Text('निरीक्षण केंद्राचे नाव आणि स्थान'),
-        ),
-        const ListTile(
-          leading: Icon(Icons.calendar_month),
-          title: Text('मोजमापाची तारीख'),
-        ),
-        const ListTile(
-          leading: Icon(Icons.water_drop),
-          title: Text('जमिनीखालील पाण्याची खोली (मीटर)'),
-        ),
-        const Text(
-          'ही माहिती प्रत्यक्ष सरकारी डेटासेटमधून '
-          'पडताळल्यानंतरच अ‍ॅपमध्ये दाखवावी.',
-        ),
-      ],
-    );
-  }
-
-  Widget potentialPage() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const Text(
-          'भूजल संभाव्यता नकाशा',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 12),
-        const Card(
-          child: Padding(
-            padding: EdgeInsets.all(14),
-            child: Text(
-              'वाघाळ्यासाठी सत्यापित GIS संभाव्यता स्तर '
-              'अद्याप या अ‍ॅपमध्ये जोडलेला नाही. '
-              'खालील अधिकृत जिल्हा अहवालातून '
-              'भूगर्भरचना आणि भूजल व्यवस्थापनाची '
-              'माहिती तपासता येईल.',
-            ),
-          ),
-        ),
-        FilledButton.icon(
-          onPressed: () => openOfficialSource(aquiferReportUrl),
-          icon: const Icon(Icons.description),
-          label: const Text('परभणी जिल्हा भूजल अहवाल'),
-        ),
-        const SizedBox(height: 8),
-        OutlinedButton.icon(
-          onPressed: () => openOfficialSource(gsdaUrl),
-          icon: const Icon(Icons.map),
-          label: const Text('GSDA भूजल नकाशे'),
-        ),
-        const SizedBox(height: 16),
-        const Text(
-          'संभाव्यता ठरवताना खडकांचा प्रकार, भेगा, '
-          'भूगर्भरचना, उतार आणि पाणी पुनर्भरण '
-          'यांचा अभ्यास आवश्यक आहे.',
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'எச்சரிக்கை: हा विभाग अद्याप உண்மையான '
-          'GIS தரவை காட்டவில்லை.',
-          style: TextStyle(color: Colors.red),
-        ),
-      ],
-    );
-  }
-
-  Widget mapPage() {
-    return Column(
-      children: [
-        const Padding(
-          padding: EdgeInsets.all(12),
-          child: Text(
-            'वाघाळा परिसराचा नकाशा',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        Expanded(
-          child: FlutterMap(
-            options: const MapOptions(
-              initialCenter: village,
-              initialZoom: 13,
-            ),
-            children: [
-              TileLayer(
-                urlTemplate:
-                    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.example.jalmitra',
-              ),
-              MarkerLayer(
-                markers: [
-                  Marker(
-                    point: village,
-                    width: 110,
-                    height: 65,
-                    child: const Column(
-                      children: [
-                        Icon(
-                          Icons.location_on,
-                          color: Colors.red,
-                          size: 36,
-                        ),
-                        Text(
-                          'वाघाळा',
-                          style: TextStyle(
-                            backgroundColor: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const Padding(
-          padding: EdgeInsets.all(8),
-          child: Text(
-            'हा भौगोलिक नकाशा आहे; भूजल संभाव्यता स्तर नाही.',
-          ),
-        ),
-      ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final pages = [
-      homePage(),
-      monitoringPage(),
-      potentialPage(),
-      mapPage(),
-    ];
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text('जलमित्र'),
-        backgroundColor: Colors.blue.shade100,
+        title: const Text('जलमित्र - भूजल मार्गदर्शन'),
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
       ),
-      body: IndexedStack(
-        index: page,
-        children: pages,
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: page,
-        onDestinationSelected: (index) {
-          setState(() => page = index);
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home),
-            label: 'होम',
+      body: ListView(
+        padding: const EdgeInsets.all(12),
+        children: [
+          Card(
+            color: Colors.blue.shade50,
+            child: const Padding(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'नमस्कार! जलमित्रमध्ये स्वागत आहे',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'विहीर, बोअरवेल, सरकारी भूजल माहिती '
+                    'आणि भूजल नकाशांसाठी मार्गदर्शन.',
+                  ),
+                ],
+              ),
+            ),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.water_drop),
-            label: 'निरीक्षण',
+          const SizedBox(height: 8),
+
+          const Text(
+            'तुमचे गाव: वाघाळा, तालुका पाथरी, जिल्हा परभणी',
+            style: TextStyle(fontWeight: FontWeight.bold),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.layers),
-            label: 'संभाव्यता',
+          const SizedBox(height: 12),
+
+          SizedBox(
+            height: 300,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: FlutterMap(
+                options: const MapOptions(
+                  initialCenter: waghala,
+                  initialZoom: 13,
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.example.jalmitra',
+                  ),
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: waghala,
+                        width: 150,
+                        height: 65,
+                        child: const Column(
+                          children: [
+                            Icon(
+                              Icons.location_on,
+                              color: Colors.red,
+                              size: 36,
+                            ),
+                            Text(
+                              'वाघाळा',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                backgroundColor: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.map),
-            label: 'नकाशा',
+
+          const SizedBox(height: 16),
+          const Text(
+            'सरकारी भूजल माहिती',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          sourceButton(
+            context: context,
+            icon: Icons.water_drop,
+            title: 'GSDA - भूजल पाणीपातळी',
+            subtitle: 'महाराष्ट्र शासनाची भूजल निरीक्षण माहिती',
+            url:
+                'https://gsda.maharashtra.gov.in/भूजल-पाणी-पातळी/',
+          ),
+
+          sourceButton(
+            context: context,
+            icon: Icons.location_searching,
+            title: 'GSDA - भूजल सर्वेक्षण',
+            subtitle: 'गावनिहाय भूजल व भूशास्त्रीय नकाशांची माहिती',
+            url:
+                'https://gsda.maharashtra.gov.in/विस्तृत-भूजल-सर्वेक्षण/',
+          ),
+
+          sourceButton(
+            context: context,
+            icon: Icons.map,
+            title: 'MRSAC - भूजल GIS नकाशे',
+            subtitle: 'महाराष्ट्राचे भूस्थानिक नकाशे व GIS सेवा',
+            url:
+                'https://portal.mrsac.org.in/gp/rest/services/mahagsda',
+          ),
+
+          sourceButton(
+            context: context,
+            icon: Icons.public,
+            title: 'CGWB - परभणी जिल्हा भूजल अहवाल',
+            subtitle: 'Aquifer Maps and Ground Water Management Plan',
+            url:
+                'https://cgwb.gov.in/cgwbpnm/publication-detail/1601',
+          ),
+
+          sourceButton(
+            context: context,
+            icon: Icons.analytics,
+            title: 'GSDA - भूजल संसाधन अंदाज',
+            subtitle: 'तालुकानिहाय व राज्यस्तरीय भूजल मूल्यांकन',
+            url:
+                'https://gsda.maharashtra.gov.in/en-groundwater-resource-estimation/',
+          ),
+
+          const SizedBox(height: 12),
+          Card(
+            color: Colors.orange.shade50,
+            child: const Padding(
+              padding: EdgeInsets.all(14),
+              child: Text(
+                'महत्त्वाची सूचना:\n'
+                'नकाशावरील लाल खूण ही वाघाळा गावाचे स्थान आहे; '
+                'ती सरकारी निरीक्षण विहीर नाही. '
+                'सरकारी वेबसाइट उघडल्यावर उपलब्ध माहिती तपासा. '
+                'या आवृत्तीत प्रत्यक्ष केंद्रांची पाणीपातळी '
+                'आपोआप डाउनलोड होत नाही आणि भूजल संभाव्यता '
+                'GIS थर मुख्य नकाशावर अद्याप दाखवलेला नाही. '
+                'विहीर किंवा बोअरवेलसाठी जागा ठरवण्यापूर्वी '
+                'स्थानिक भूजल तज्ज्ञांचा सल्ला घ्या.',
+              ),
+            ),
           ),
         ],
       ),
