@@ -1,7 +1,7 @@
 name: jalmitra
 description: Jalmitra groundwater information and borewell guidance app
 publish_to: 'none'
-version: 1.0.0+2
+version: 1.0.0+3
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -10,17 +10,17 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # नकाशा दाखवण्यासाठी
+  # नकाशा
   flutter_map: ^8.2.1
   latlong2: ^0.9.1
 
-  # GPS लोकेशनसाठी
+  # GPS लोकेशन
   geolocator: ^14.0.2
 
-  # वापरकर्त्याची माहिती सेव्ह करण्यासाठी
+  # माहिती सेव्ह करण्यासाठी
   shared_preferences: ^2.5.3
 
-  # इंटरनेटवरून भूजल डेटा मिळवण्यासाठी
+  # इंटरनेटवरील डेटा
   http: ^1.4.0
 
 dev_dependencies:
