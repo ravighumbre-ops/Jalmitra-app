@@ -24,70 +24,154 @@ class JalmitraApp extends StatelessWidget {
   }
 }
 
-class JalmitraHome extends StatelessWidget {
+class JalmitraHome extends StatefulWidget {
   const JalmitraHome({super.key});
 
-  static const LatLng waghala = LatLng(19.130057, 76.469843);
+  @override
+  State<JalmitraHome> createState() => _JalmitraHomeState();
+}
+
+class _JalmitraHomeState extends State<JalmitraHome> {
+  static const LatLng waghala =
+      LatLng(19.130057, 76.469843);
+
+  final MapController mapController = MapController();
+
+  int mapKey = 0;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Jalmitra - भूजल माहिती'),
+        backgroundColor: Colors.blue.shade100,
       ),
       body: Column(
         children: [
           const ListTile(
-            leading: Icon(Icons.water_drop, color: Colors.blue),
-            title: Text('वाघाळा, तालुका पाथरी'),
+            leading: Icon(
+              Icons.water_drop,
+              color: Colors.blue,
+              size: 32,
+            ),
+            title: Text(
+              'वाघाळा, तालुका पाथरी',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             subtitle: Text('जिल्हा परभणी, महाराष्ट्र'),
           ),
+
           Expanded(
-            child: FlutterMap(
-              options: const MapOptions(
-                initialCenter: waghala,
-                initialZoom: 13,
-              ),
+            child: Stack(
               children: [
-                TileLayer(
-                  urlTemplate:
-                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.example.jalmitra',
-                ),
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: waghala,
-                      width: 120,
-                      height: 80,
-                      child: const Column(
-                        children: [
-                          Icon(
-                            Icons.location_pin,
-                            color: Colors.red,
-                            size: 40,
+                FlutterMap(
+                  key: ValueKey(mapKey),
+                  mapController: mapController,
+                  options: const MapOptions(
+                    initialCenter: waghala,
+                    initialZoom: 13,
+                    minZoom: 3,
+                    maxZoom: 18,
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate:
+                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName:
+                          'com.example.jalmitra',
+                      maxNativeZoom: 19,
+                      errorTileCallback: (tile, error, stackTrace) {
+                        debugPrint(
+                          'नकाशा टाइल त्रुटी: $error',
+                        );
+                      },
+                    ),
+
+                    MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: waghala,
+                          width: 130,
+                          height: 75,
+                          child: const Column(
+                            children: [
+                              Icon(
+                                Icons.location_pin,
+                                color: Colors.red,
+                                size: 40,
+                              ),
+                              DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                ),
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 5,
+                                    vertical: 2,
+                                  ),
+                                  child: Text(
+                                    'वाघाळा',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          Text(
-                            'वाघाळा',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              backgroundColor: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
+                    ),
+
+                    RichAttributionWidget(
+                      attributions: [
+                        TextSourceAttribution(
+                          'OpenStreetMap contributors',
+                          onTap: () {},
+                        ),
+                      ],
                     ),
                   ],
+                ),
+
+                Positioned(
+                  right: 12,
+                  top: 12,
+                  child: FloatingActionButton.small(
+                    heroTag: 'myLocation',
+                    tooltip: 'वाघाळा येथे जा',
+                    onPressed: () {
+                      mapController.move(waghala, 13);
+                    },
+                    child: const Icon(Icons.location_searching),
+                  ),
+                ),
+
+                Positioned(
+                  right: 12,
+                  top: 62,
+                  child: FloatingActionButton.small(
+                    heroTag: 'refreshMap',
+                    tooltip: 'नकाशा पुन्हा लोड करा',
+                    onPressed: () {
+                      setState(() {
+                        mapKey++;
+                      });
+                    },
+                    child: const Icon(Icons.refresh),
+                  ),
                 ),
               ],
             ),
           ),
+
           const Padding(
             padding: EdgeInsets.all(12),
             child: Text(
-              'सूचना: हा सामान्य भौगोलिक नकाशा आहे. '
-              'यातून जमिनीखालील पाण्याची जागा किंवा '
-              'विहिरीतील पाण्याची खात्री कळत नाही.',
+              'हा सामान्य भौगोलिक नकाशा आहे. '
+              'यावरून जमिनीखालील पाण्याची अचूक जागा '
+              'किंवा विहिरीतील पाण्याची खात्री समजत नाही.',
               textAlign: TextAlign.center,
             ),
           ),
